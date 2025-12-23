@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
-static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
+int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
     return tok->type == JSMN_STRING &&
            (int)strlen(s) == tok->end - tok->start &&
            strncmp(json + tok->start, s, tok->end - tok->start) == 0;

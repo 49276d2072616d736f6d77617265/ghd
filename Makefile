@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=-O2 -Wall -Wextra
 LDFLAGS=-lssl -lcrypto
 
-SRC = main.c http.c hmac.c github.c json.c jsmn.c
+SRC = dispatch.c exec.c main.c http.c hmac.c github.c json.c jsmn.c
 OBJ = $(SRC:%.c=build/%.o)
 
 BIN = out/ghd

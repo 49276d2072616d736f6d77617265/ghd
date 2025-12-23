@@ -16,9 +16,10 @@
 
 - 原生 POSIX socket HTTP server
 - GitHub `X-Hub-Signature-256` HMAC 校验（SHA-256）
-- 模块化设计（HTTP / HMAC / JSON / GitHub 规则）
+- 模块化设计（HTTP / HMAC / JSON / GitHub 规则 / Exec）
 - 使用轻量级 JSON 解析器（jsmn，已修复嵌套对象解析）
 - 正确返回 GitHub 期望的 HTTP 状态码
+- 支持 webhook push 事件自动执行 `git pull`
 - 适合作为：
   - GitHub webhook daemon
   - mirror / automation trigger
@@ -34,7 +35,7 @@
 - HMAC 校验：正确（与 GitHub 行为一致）
 - JSON 解析：已修复（支持嵌套对象，如 `repository.full_name`）
 - GitHub 事件规则：基础支持（push + branch）
-- 执行动作（exec）：尚未实现
+- 执行动作（exec git pull）：已实现
 
 > 注意：JSON 解析错误不会影响 HTTP 响应，  
 > 服务始终返回 `200 OK`，这是 GitHub webhook 的**正确行为**  
@@ -52,6 +53,7 @@ include/
 ├── hmac.h          # GitHub HMAC 校验接口
 ├── json.h          # webhook_event 抽象
 ├── github.h        # GitHub 事件规则与调度
+├── exec.h          # 执行动作接口
 
 src/
 ├── main.c          # 程序入口（只负责调度）
@@ -59,6 +61,7 @@ src/
 ├── hmac.c          # HMAC SHA-256 实现
 ├── json.c          # JSON → webhook_event
 ├── github.c        # GitHub 事件决策
+├── exec.c          # 执行 git pull / 自定义动作
 ├── jsmn.c          # 轻量 JSON parser（已修复）
 
 build/              # 编译中间产物（.o）
@@ -126,6 +129,8 @@ HTTP/1.1 200 OK
 OK
 ```
 
+此时，daemon 会自动在配置的仓库目录执行 `git pull`。
+
 ---
 
 ## 设计原则 (Design Principles)
@@ -141,7 +146,7 @@ OK
 ## 路线图 (Roadmap)
 
 * [x] 修正 JSON 解析逻辑（支持嵌套对象）
-* [ ] 添加 `exec.c`（安全执行 hook）
+* [x] 添加 `exec.c`（安全执行 git pull）
 * [ ] fork + execve + timeout
 * [ ] drop privileges
 * [ ] daemon / service mode
@@ -167,9 +172,10 @@ This project intentionally avoids high-level frameworks and full HTTP/JSON stack
 
 * Native POSIX socket HTTP server
 * GitHub `X-Hub-Signature-256` HMAC validation (SHA-256)
-* Modular architecture (HTTP / HMAC / JSON / GitHub rules)
+* Modular architecture (HTTP / HMAC / JSON / GitHub rules / Exec)
 * Lightweight JSON parsing (jsmn, with nested object support)
 * Correct GitHub-compatible HTTP responses
+* Supports push events and automatic `git pull`
 * Suitable as:
 
   * GitHub webhook daemon
@@ -186,7 +192,7 @@ Current state: **usable / work in progress**
 * HMAC validation: correct
 * JSON parsing: fixed (supports nested objects such as `repository.full_name`)
 * GitHub rules: basic (push + branch)
-* Exec hooks: not implemented yet
+* Exec hooks (`git pull`): implemented
 
 JSON parsing errors do not affect the HTTP response;
 the daemon always returns `200 OK`, which is the
