@@ -122,7 +122,7 @@ int parse_webhook_json(const unsigned char *json,
         }
     }
 
-    // Debug: imprimir os valores parseados
+    // DEBUG
     fprintf(stderr, "[json] parsed: action=%s, repo=%s, ref=%s, exec_dir=%s\n",
             out->action, out->repo, out->ref, out->exec_dir);
 

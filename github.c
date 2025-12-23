@@ -5,7 +5,7 @@
 
 ghp_status_t github_should_process(webhook_event_t *ev) {
 
-    // aceitar apenas eventos que nos interessam
+    
     if (!ev->action[0])
         return GHP_IGNORE_ACTION;
 
@@ -16,18 +16,15 @@ ghp_status_t github_should_process(webhook_event_t *ev) {
         return GHP_IGNORE_ACTION;
     }
 
-    // aceitar qualquer repo (ou filtrar)
     if (!ev->repo[0])
         return GHP_IGNORE_REPO;
 
-    // opcional: aceitar qualquer branch para push
     if (strcmp(ev->action, "push") == 0 &&
         (!ev->ref[0] || strcmp(ev->ref, "refs/heads/main") != 0))
     {
         return GHP_IGNORE_BRANCH;
     }
 
-    // definir diretório de execução SOMENTE se estiver vazio
     if (!ev->exec_dir[0]) {
         snprintf(ev->exec_dir, sizeof(ev->exec_dir), "/home/user/repos/ghd");
     }
