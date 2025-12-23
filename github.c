@@ -4,23 +4,37 @@
 #include <string.h>
 
 ghp_status_t github_should_process(webhook_event_t *ev) {
-    // Só aceita push
-    if (!ev->action[0] || strcmp(ev->action, "push") != 0)
+
+    // aceitar apenas eventos que nos interessam
+    if (!ev->action[0])
         return GHP_IGNORE_ACTION;
 
-    // Repos permitidos hardcoded
-    if (!ev->repo[0] || strcmp(ev->repo, "sk/ghd") != 0)
+    if (strcmp(ev->action, "push") != 0 &&
+        strcmp(ev->action, "pull_request") != 0 &&
+        strcmp(ev->action, "issues") != 0)
+    {
+        return GHP_IGNORE_ACTION;
+    }
+
+    // aceitar qualquer repo (ou filtrar)
+    if (!ev->repo[0])
         return GHP_IGNORE_REPO;
 
-    // Branches permitidas hardcoded
-    if (!ev->ref[0] || strcmp(ev->ref, "refs/heads/main") != 0)
+    // opcional: aceitar qualquer branch para push
+    if (strcmp(ev->action, "push") == 0 &&
+        (!ev->ref[0] || strcmp(ev->ref, "refs/heads/main") != 0))
+    {
         return GHP_IGNORE_BRANCH;
+    }
 
-    // Caminho local hardcoded
-    snprintf(ev->exec_dir, sizeof(ev->exec_dir), "/home/sk/repos/ghd");
+    // definir diretório de execução SOMENTE se estiver vazio
+    if (!ev->exec_dir[0]) {
+        snprintf(ev->exec_dir, sizeof(ev->exec_dir), "/home/user/repos/ghd");
+    }
 
     return GHP_OK;
 }
+
 
 void github_log_event(const webhook_event_t *ev) {
     if (ev->action[0])

@@ -1,5 +1,7 @@
 # ghd — GitHub Hook Daemon
 
+## 中文版 (CH)
+
 一个用 **C 语言** 编写的 **极简 GitHub Webhook 守护进程**。  
 目标是提供一个 **低依赖、可审计、可扩展** 的 GitHub webhook 接收与处理核心。
 
@@ -20,6 +22,7 @@
 - 使用轻量级 JSON 解析器（jsmn，已修复嵌套对象解析）
 - 正确返回 GitHub 期望的 HTTP 状态码
 - 支持 webhook push 事件自动执行 `git pull`
+- 支持 PR / issue 日志生成
 - 适合作为：
   - GitHub webhook daemon
   - mirror / automation trigger
@@ -29,13 +32,13 @@
 
 ## 项目状态 (Project Status)
 
-当前状态：**可用 / 进行中（WIP）**
+当前状态：**可用 / 已实现主要功能** ✅
 
 - HTTP 接收：稳定
 - HMAC 校验：正确（与 GitHub 行为一致）
 - JSON 解析：已修复（支持嵌套对象，如 `repository.full_name`）
-- GitHub 事件规则：基础支持（push + branch）
-- 执行动作（exec git pull）：已实现
+- GitHub 事件规则：基础支持（push + branch + PR + issue）
+- 执行动作（exec git pull / PR / issue 日志）：已实现
 
 > 注意：JSON 解析错误不会影响 HTTP 响应，  
 > 服务始终返回 `200 OK`，这是 GitHub webhook 的**正确行为**  
@@ -61,11 +64,12 @@ src/
 ├── hmac.c          # HMAC SHA-256 实现
 ├── json.c          # JSON → webhook_event
 ├── github.c        # GitHub 事件决策
-├── exec.c          # 执行 git pull / 自定义动作
+├── exec.c          # 执行 git pull / PR / issue 日志
 ├── jsmn.c          # 轻量 JSON parser（已修复）
 
 build/              # 编译中间产物（.o）
 out/                # 最终可执行文件
+scripts/            # 示例 webhook 测试脚本
 
 ````
 
@@ -111,25 +115,17 @@ make
 
 ---
 
-## 测试 (Test with curl)
+## 测试脚本 (Test Scripts)
 
-单行测试命令（包含真实 HMAC 计算）：
+示例脚本位于项目根目录，可直接运行以测试 webhook 功能：
 
 ```bash
-curl -i -X POST http://localhost:9000/hook \
-  -H "Content-Type: application/json" \
-  -H "X-Hub-Signature-256: sha256=$(printf '%s' '{"action":"push","repository":{"full_name":"username/ghd"},"ref":"refs/heads/main"}' | openssl dgst -sha256 -hmac 'supersecret' | sed 's/^.* //')" \
-  --data-binary '{"action":"push","repository":{"full_name":"username/ghd"},"ref":"refs/heads/main"}'
+./scripts/test_push.sh
+./scripts/test_pr.sh
+./scripts/test_issue.sh
 ```
 
-预期返回：
-
-```
-HTTP/1.1 200 OK
-OK
-```
-
-此时，daemon 会自动在配置的仓库目录执行 `git pull`。
+> 脚本会模拟 GitHub webhook 请求，触发对应仓库目录的 git pull 或 PR/issue 日志处理。
 
 ---
 
@@ -146,7 +142,7 @@ OK
 ## 路线图 (Roadmap)
 
 * [x] 修正 JSON 解析逻辑（支持嵌套对象）
-* [x] 添加 `exec.c`（安全执行 git pull）
+* [x] 添加 `exec.c`（安全执行 git pull / PR / issue 日志）
 * [ ] fork + execve + timeout
 * [ ] drop privileges
 * [ ] daemon / service mode
@@ -154,7 +150,20 @@ OK
 
 ---
 
+## Checklist
+
+* [x] HTTP 接收与解析
+* [x] HMAC 校验（SHA-256）
+* [x] JSON 解析与嵌套对象支持
+* [x] GitHub push 事件支持 + 自动 git pull
+* [x] PR / issue 日志生成
+* [ ] fork + timeout
+
+---
+
 # ghd — GitHub Hook Daemon
+
+## English Version (EN)
 
 A **minimal GitHub webhook daemon written in C**.
 The goal is to provide a **low-dependency, auditable, extensible** core for receiving and handling GitHub webhooks.
@@ -176,6 +185,7 @@ This project intentionally avoids high-level frameworks and full HTTP/JSON stack
 * Lightweight JSON parsing (jsmn, with nested object support)
 * Correct GitHub-compatible HTTP responses
 * Supports push events and automatic `git pull`
+* Supports PR / issue logging
 * Suitable as:
 
   * GitHub webhook daemon
@@ -186,13 +196,13 @@ This project intentionally avoids high-level frameworks and full HTTP/JSON stack
 
 ## Project Status
 
-Current state: **usable / work in progress**
+Current state: **usable / main features implemented** ✅
 
 * HTTP handling: stable
 * HMAC validation: correct
-* JSON parsing: fixed (supports nested objects such as `repository.full_name`)
-* GitHub rules: basic (push + branch)
-* Exec hooks (`git pull`): implemented
+* JSON parsing: fixed (supports nested objects like `repository.full_name`)
+* GitHub rules: basic (push + branch + PR + issue)
+* Exec hooks (git pull / PR / issue logging): implemented
 
 JSON parsing errors do not affect the HTTP response;
 the daemon always returns `200 OK`, which is the
@@ -200,12 +210,113 @@ the daemon always returns `200 OK`, which is the
 
 ---
 
-## Philosophy
+## Structure
 
-This project prioritizes:
+```
+include/
+├── config.h        # Global config (port, secrets, limits)
+├── http.h          # HTTP interface definitions
+├── hmac.h          # GitHub HMAC validation interface
+├── json.h          # webhook_event abstraction
+├── github.h        # GitHub rules and dispatch
+├── exec.h          # Execution hooks
 
-* correctness over convenience
-* explicit code over abstraction
-* control over automation
+src/
+├── main.c          # Entry point (only dispatches)
+├── http.c          # HTTP parsing and response
+├── hmac.c          # HMAC SHA-256 implementation
+├── json.c          # JSON → webhook_event
+├── github.c        # GitHub event decisions
+├── exec.c          # Execute git pull / PR / issue logs
+├── jsmn.c          # Lightweight JSON parser (fixed)
 
-It is intentionally low-level.
+build/              # Object files (.o)
+out/                # Executable
+scripts/            # Example webhook test scripts
+```
+
+---
+
+## Build Requirements
+
+### Debian / Ubuntu
+
+```bash
+sudo apt install gcc make libssl-dev
+```
+
+### Arch Linux
+
+```bash
+sudo pacman -S gcc make openssl
+```
+
+---
+
+## Build
+
+```bash
+make
+```
+
+Executable is generated at:
+
+```bash
+./out/ghd
+```
+
+---
+
+## Run
+
+```bash
+./out/ghd
+```
+
+Default listening port: `9000`
+
+---
+
+## Test Scripts
+
+Example scripts are provided in the project root to test webhook functionality:
+
+```bash
+./scripts/test_push.sh
+./scripts/test_pr.sh
+./scripts/test_issue.sh
+```
+
+> Scripts simulate GitHub webhook requests, triggering git pull or PR/issue logging in the configured repository directories.
+
+---
+
+## Design Principles
+
+* One file = one responsibility
+* `main.c` only dispatches, no business logic
+* Config centralized in `config.h`
+* No high-level frameworks
+* All components replaceable (HTTP / JSON / exec)
+
+---
+
+## Roadmap
+
+* [x] Fix JSON parsing (support nested objects)
+* [x] Add `exec.c` (safe git pull / PR / issue logging)
+* [ ] fork + execve + timeout
+* [ ] drop privileges
+* [ ] daemon / service mode
+* [ ] P2P / mirror backend
+
+---
+
+## Checklist
+
+* [x] HTTP handling
+* [x] HMAC validation (SHA-256)
+* [x] JSON parsing (nested objects supported)
+* [x] GitHub push events + auto git pull
+* [x] PR / issue logging
+* [ ] fork + timeout
