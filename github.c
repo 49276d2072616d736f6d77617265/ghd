@@ -4,15 +4,14 @@
 
 int github_should_process(const webhook_event_t *ev)
 {
-    /* Ignora eventos sem ação */
+
     if (!ev->action[0])
         return 0;
 
-    /* Só push por enquanto */
+
     if (strcmp(ev->action, "push") != 0)
         return 0;
 
-    /* Só branch main */
     if (strcmp(ev->ref, "refs/heads/main") != 0)
         return 0;
 

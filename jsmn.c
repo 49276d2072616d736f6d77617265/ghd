@@ -15,7 +15,8 @@ static jsmntok_t *jsmn_alloc_token(jsmn_parser *parser,
         return NULL;
 
     jsmntok_t *tok = &tokens[parser->toknext++];
-    tok->start = tok->end = -1;
+    tok->start = -1;
+    tok->end = -1;
     tok->size = 0;
     tok->parent = -1;
     return tok;
@@ -32,16 +33,20 @@ int jsmn_parse(jsmn_parser *parser,
         jsmntok_t *tok;
 
         switch (c) {
-        case '{': case '[':
+
+        case '{':
+        case '[':
             tok = jsmn_alloc_token(parser, tokens, num_tokens);
             if (!tok) return -1;
+
             tok->type = (c == '{') ? JSMN_OBJECT : JSMN_ARRAY;
             tok->start = parser->pos;
             tok->parent = parser->toksuper;
             parser->toksuper = parser->toknext - 1;
             break;
 
-        case '}': case ']':
+        case '}':
+        case ']':
             for (int i = parser->toknext - 1; i >= 0; i--) {
                 tok = &tokens[i];
                 if (tok->start != -1 && tok->end == -1) {
@@ -55,26 +60,36 @@ int jsmn_parse(jsmn_parser *parser,
         case '\"':
             tok = jsmn_alloc_token(parser, tokens, num_tokens);
             if (!tok) return -1;
+
             tok->type = JSMN_STRING;
             tok->start = ++parser->pos;
+            tok->parent = parser->toksuper;
+
             for (; parser->pos < len; parser->pos++) {
                 if (js[parser->pos] == '\"') {
                     tok->end = parser->pos;
-                    tok->parent = parser->toksuper;
                     break;
                 }
             }
             break;
 
-        case '\t': case '\r': case '\n': case ' ':
+        /* IGNORAR WHITESPACE E SEPARADORES JSON */
+        case '\t':
+        case '\r':
+        case '\n':
+        case ' ':
+        case ':':
+        case ',':
             break;
 
         default:
             tok = jsmn_alloc_token(parser, tokens, num_tokens);
             if (!tok) return -1;
+
             tok->type = JSMN_PRIMITIVE;
             tok->start = parser->pos;
             tok->parent = parser->toksuper;
+
             for (; parser->pos < len; parser->pos++) {
                 if (strchr(",}] \t\r\n", js[parser->pos])) {
                     tok->end = parser->pos;
@@ -82,7 +97,13 @@ int jsmn_parse(jsmn_parser *parser,
                     break;
                 }
             }
+
+            if (tok->end == -1)
+                tok->end = parser->pos + 1;
+
+            break;
         }
     }
+
     return parser->toknext;
 }

@@ -109,16 +109,6 @@ int main(void) {
         printf("[ghd] valid webhook (%d bytes)\n", content_length);
 
         webhook_event_t ev;
-        // if (parse_webhook_json(body, content_length, &ev) == 0) {
-        //     if (ev.action[0])
-        //         printf("[ghd] action = %s\n", ev.action);
-        //     if (ev.repo[0])
-        //         printf("[ghd] repo   = %s\n", ev.repo);
-        //     if (ev.ref[0])
-        //         printf("[ghd] ref    = %s\n", ev.ref);
-        // } else {
-        //     printf("[ghd] JSON parse error\n");
-        // }
 
         if (parse_webhook_json(body, content_length, &ev) == 0) {
             github_log_event(&ev);
