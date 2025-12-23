@@ -28,13 +28,13 @@
 
 当前状态：**可用 / 进行中（WIP）**
 
-- HTTP 接收：✅ 稳定
-- HMAC 校验：✅ 正确（与 GitHub 行为一致）
-- JSON 解析：⚠️ 部分字段解析中（不影响 webhook 接收）
-- GitHub 事件规则：✅ 基础支持（push + branch）
-- 执行动作（exec）：❌ 尚未实现
+- HTTP 接收：稳定
+- HMAC 校验：正确（与 GitHub 行为一致）
+- JSON 解析：部分字段解析中（不影响 webhook 接收）
+- GitHub 事件规则：基础支持（push + branch）
+- 执行动作（exec）：尚未实现
 
-> ⚠️ 注意：即使 JSON 解析失败，服务仍然返回 `200 OK`，  
+> 注意：即使 JSON 解析失败，服务仍然返回 `200 OK`，  
 > 这是 GitHub webhook 的**正确行为**（防止重复重试）。
 
 ---
